@@ -215,14 +215,6 @@ export function Sidebar({
             </div>
         )}
       </div>
-
-      {mode === "edit" && (
-        <div className="border-t p-4">
-          <Button variant="ghost" className="w-full justify-start text-muted-foreground">
-            Settings
-          </Button>
-        </div>
-      )}
     </aside>
   );
 }
