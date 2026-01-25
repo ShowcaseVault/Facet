@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -38,7 +39,14 @@ export function HeroSection() {
     <section className="flex flex-col items-center justify-center px-4 py-24 text-center md:py-32">
         {/* Logo / Branding Placeholder */}
         <div className="mb-8 flex items-center justify-center">
-            <img src="/logo.png" alt="Facet Logo" className="h-25 w-25 object-contain drop-shadow-xl" />
+            <Image 
+              src="/logo.png" 
+              alt="Facet - GitHub Portfolio Curation Platform Logo" 
+              width={100}
+              height={100}
+              className="object-contain drop-shadow-xl"
+              priority
+            />
         </div>
 
       <h1 className="mb-6 max-w-4xl text-4xl font-bold tracking-tight text-foreground sm:text-6xl text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400">

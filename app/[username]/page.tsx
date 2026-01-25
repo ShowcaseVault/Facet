@@ -5,11 +5,66 @@ import { Sidebar } from "@/components/shared/Sidebar";
 import { RepoList } from "@/components/shared/RepoList";
 import { getProfileByUsername, getUserCollections, getCollectionRepos, getAllUserRepoFullNames } from "@/lib/supabase/server-queries";
 import { getGitHubUser, getGitHubUserRepos } from "@/lib/github/api";
+import type { Metadata } from "next";
 
 type Props = {
   params: Promise<{ username: string }>;
   searchParams: Promise<{ collection?: string; page?: string }>;
 };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { username } = await params;
+  
+  // Fetch user data for metadata
+  let gitHubUser: any = null;
+  try {
+    gitHubUser = await getGitHubUser(username);
+  } catch (e) {
+    return {
+      title: `${username} - Profile Not Found`,
+      description: `GitHub user ${username} could not be found.`
+    };
+  }
+
+  const profile = await getProfileByUsername(username);
+  const displayName = profile?.display_name || gitHubUser.name || gitHubUser.login;
+  const bio = profile?.bio || gitHubUser.bio || '';
+  const isFacetUser = !!profile;
+
+  const title = isFacetUser 
+    ? `${displayName}'s Portfolio`
+    : `${displayName} - GitHub Profile`;
+
+  const description = isFacetUser
+    ? `Explore ${displayName}'s curated GitHub projects and collections. ${bio ? bio.substring(0, 100) : 'Discover their best work and development journey.'}`
+    : `View ${displayName}'s GitHub repositories and projects. ${bio ? bio.substring(0, 100) : ''}`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title: `${displayName}'s Portfolio | Facet`,
+      description: description.substring(0, 160),
+      url: `https://facet-one.vercel.app/${username}`,
+      type: 'profile',
+      images: [
+        {
+          url: profile?.avatar_url || gitHubUser.avatar_url || '/og-image.png',
+          width: 400,
+          height: 400,
+          alt: `${displayName}'s avatar`,
+        }
+      ],
+    },
+    twitter: {
+      card: 'summary',
+      title: `${displayName}'s Portfolio`,
+      description: description.substring(0, 160),
+      images: [profile?.avatar_url || gitHubUser.avatar_url || '/twitter-image.png'],
+    },
+  };
+}
+
 
 export default async function ProfilePage({ params, searchParams }: Props) {
   const { username } = await params;
@@ -185,6 +240,29 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           </div>
         </div>
       </div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              {
+                '@type': 'ListItem',
+                position: 1,
+                name: 'Home',
+                item: 'https://facet-one.vercel.app',
+              },
+              {
+                '@type': 'ListItem',
+                position: 2,
+                name: displayName,
+                item: `https://facet-one.vercel.app/${username}`,
+              },
+            ],
+          }),
+        }}
+      />
     </div>
   );
 }
