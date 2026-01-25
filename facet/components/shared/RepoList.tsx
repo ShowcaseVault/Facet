@@ -4,6 +4,24 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
 
+import {
+  DndContext, 
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
 interface Repository {
   id: string | number;
   full_name: string;
@@ -19,16 +37,43 @@ interface RepoListProps {
   onAdd?: (repo: Repository) => void;
   onRemove?: (repoId: string | number) => void;
   onNote?: (repo: Repository) => void;
+  onReorder?: (newOrder: Repository[]) => void;
   className?: string;
 }
 
-export function RepoList({ repos, mode, onAdd, onRemove, onNote, className }: RepoListProps) {
+function SortableRepoItem({ repo, mode, onAdd, onRemove, onNote }: {
+  repo: Repository;
+  mode: "pick" | "view";
+  onAdd?: (repo: Repository) => void;
+  onRemove?: (repoId: string | number) => void;
+  onNote?: (repo: Repository) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: repo.id, disabled: mode === "view" });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : "auto",
+    opacity: isDragging ? 0.5 : 1,
+  };
+
   return (
-    <div className={cn("grid gap-4", className)}>
-      {repos.map((repo) => (
-        <Card key={repo.id} className="overflow-hidden transition-all hover:shadow-md border-muted">
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+        <Card className="overflow-hidden transition-all hover:shadow-md border-muted touch-none select-none">
           <CardContent className="p-0">
             <div className="flex h-24 items-center gap-4 px-6">
+              {mode === "pick" && (
+                 <div className="text-muted-foreground mr-2 cursor-grab active:cursor-grabbing">
+                    ⋮⋮
+                 </div>
+              )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
                   <span className="text-base font-semibold text-foreground truncate">
@@ -55,7 +100,7 @@ export function RepoList({ repos, mode, onAdd, onRemove, onNote, className }: Re
                 )}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2" onPointerDown={(e) => e.stopPropagation()}>
                 {mode === "pick" && onAdd && (
                   <Button onClick={() => onAdd(repo)} size="sm" variant="secondary">
                     Add
@@ -87,7 +132,64 @@ export function RepoList({ repos, mode, onAdd, onRemove, onNote, className }: Re
             </div>
           </CardContent>
         </Card>
-      ))}
+    </div>
+  );
+}
+
+export function RepoList({ repos, mode, onAdd, onRemove, onNote, onReorder, className }: RepoListProps) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+        activationConstraint: {
+            distance: 8,
+        },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      if (onReorder) {
+          const oldIndex = repos.findIndex((r) => r.id === active.id);
+          const newIndex = repos.findIndex((r) => r.id === over.id);
+          const newOrder = arrayMove(repos, oldIndex, newIndex);
+          onReorder(newOrder);
+      }
+    }
+  }
+
+  const content = repos.map((repo) => (
+     <SortableRepoItem
+        key={repo.id}
+        repo={repo}
+        mode={mode}
+        onAdd={onAdd}
+        onRemove={onRemove}
+        onNote={onNote}
+     />
+  ));
+
+  return (
+    <div className={cn("grid gap-4", className)}>
+      {mode === "pick" && onReorder ? (
+         <DndContext 
+            sensors={sensors} 
+            collisionDetection={closestCenter} 
+            onDragEnd={handleDragEnd}
+         >
+           <SortableContext 
+              items={repos.map(r => r.id)} 
+              strategy={verticalListSortingStrategy}
+           >
+             {content}
+           </SortableContext>
+         </DndContext>
+      ) : (
+         content
+      )}
        {repos.length === 0 && (
              <div className="text-center py-12 text-muted-foreground">
                 {mode === "pick" ? "No repositories found." : "This collection is empty."}
