@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { Sidebar } from "@/components/shared/Sidebar";
 import { RepoList } from "@/components/shared/RepoList";
 import { getProfileByUsername, getUserCollections, getCollectionRepos } from "@/lib/supabase/queries";
@@ -6,12 +8,14 @@ import { getGitHubUser, getGitHubUserRepos } from "@/lib/github/api";
 
 type Props = {
   params: Promise<{ username: string }>;
-  searchParams: Promise<{ collection?: string }>;
+  searchParams: Promise<{ collection?: string; page?: string }>;
 };
 
 export default async function ProfilePage({ params, searchParams }: Props) {
   const { username } = await params;
-  const { collection: collectionId } = await searchParams;
+  const { collection: collectionId, page } = await searchParams;
+  const currentPage = parseInt(page || "1", 10);
+  const itemsPerPage = 10;
 
   // 1. Try to fetch from Facet DB
   const profile = await getProfileByUsername(username);
@@ -94,10 +98,49 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           <div className="space-y-6">
              {repos.length > 0 ? (
                 <>
-                  <h2 className="text-xl font-semibold">
-                    {collections.find(c => c.id === activeCollectionId)?.title || "Repositories"}
-                  </h2>
-                  <RepoList repos={repos} mode="view" />
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold">
+                      {collections.find(c => c.id === activeCollectionId)?.title || "Repositories"}
+                    </h2>
+                    <span className="text-sm text-muted-foreground">
+                      Page {currentPage} of {Math.ceil(repos.length / itemsPerPage) || 1}
+                    </span>
+                  </div>
+
+                  <RepoList 
+                    repos={repos.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)} 
+                    mode="view" 
+                  />
+
+                  {/* Pagination Controls */}
+                  {repos.length > itemsPerPage && (
+                    <div className="flex items-center justify-center gap-4 py-8">
+                       <Link 
+                        href={`?${new URLSearchParams({ 
+                          ...(collectionId ? { collection: collectionId } : {}), 
+                          page: (currentPage - 1).toString() 
+                        })}`}
+                        className={cn(
+                          "px-4 py-2 text-sm font-medium rounded-md border",
+                          currentPage <= 1 ? "pointer-events-none opacity-50" : "hover:bg-accent"
+                        )}
+                       >
+                         Previous
+                       </Link>
+                       <Link 
+                        href={`?${new URLSearchParams({ 
+                          ...(collectionId ? { collection: collectionId } : {}), 
+                          page: (currentPage + 1).toString() 
+                        })}`}
+                        className={cn(
+                          "px-4 py-2 text-sm font-medium rounded-md border",
+                          currentPage * itemsPerPage >= repos.length ? "pointer-events-none opacity-50" : "hover:bg-accent"
+                        )}
+                       >
+                         Next
+                       </Link>
+                    </div>
+                  )}
                 </>
              ) : (
                 <div className="text-center py-20 text-muted-foreground">
