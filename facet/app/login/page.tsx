@@ -20,8 +20,8 @@ export default function LoginPage() {
     <div className="flex-1 flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-xl border-muted/50">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 text-white font-bold text-xl">
-            F
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center">
+            <img src="/logo.png" alt="Facet Logo" className="h-full w-full object-contain" />
           </div>
           <CardTitle className="text-2xl font-bold">Welcome to Facet</CardTitle>
           <CardDescription>

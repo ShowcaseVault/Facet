@@ -52,9 +52,6 @@ export function Navbar() {
              <img src="/logo.png" alt="Facet Logo" className="h-12 w-12 object-contain" />
              <span className="hidden sm:inline-block">Facet</span>
           </Link>
-          <nav className="flex items-center gap-4 text-sm font-medium text-muted-foreground">
-             {/* Add nav links if needed */}
-          </nav>
         </div>
 
         <div className="flex items-center gap-4">
