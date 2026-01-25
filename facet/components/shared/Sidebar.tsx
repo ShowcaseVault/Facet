@@ -54,23 +54,46 @@ export function Sidebar({
         </div>
 
         <nav className="flex flex-col gap-1">
-          {collections.map((collection) => (
-            <button
-              key={collection.id}
-              onClick={() => onSelectCollection?.(collection.id)}
-              className={cn(
-                "flex items-center justify-between rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground text-left",
-                activeCollectionId === collection.id
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground"
-              )}
-            >
-              <span className="truncate">{collection.title}</span>
-              {collection.count !== undefined && (
-                <span className="ml-2 text-xs opacity-70">{collection.count}</span>
-              )}
-            </button>
-          ))}
+          {collections.map((collection) => {
+            const content = (
+              <>
+                <span className="truncate">{collection.title}</span>
+                {collection.count !== undefined && (
+                  <span className="ml-2 text-xs opacity-70">{collection.count}</span>
+                )}
+              </>
+            );
+
+            const classNameStr = cn(
+              "flex items-center justify-between rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground text-left w-full",
+              activeCollectionId === collection.id
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground"
+            );
+
+            if (mode === "view") {
+              return (
+                <Link 
+                  key={collection.id} 
+                  href={`?collection=${collection.id}`}
+                  className={classNameStr}
+                  scroll={false}
+                >
+                  {content}
+                </Link>
+              );
+            }
+
+            return (
+              <button
+                key={collection.id}
+                onClick={() => onSelectCollection?.(collection.id)}
+                className={classNameStr}
+              >
+                {content}
+              </button>
+            );
+          })}
           
           {collections.length === 0 && (
              <div className="text-sm text-muted-foreground italic px-2 py-4 text-center border border-dashed rounded-md">

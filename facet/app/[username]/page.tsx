@@ -3,7 +3,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Sidebar } from "@/components/shared/Sidebar";
 import { RepoList } from "@/components/shared/RepoList";
-import { getProfileByUsername, getUserCollections, getCollectionRepos } from "@/lib/supabase/queries";
+import { getProfileByUsername, getUserCollections, getCollectionRepos, getAllUserRepoFullNames } from "@/lib/supabase/server-queries";
 import { getGitHubUser, getGitHubUserRepos } from "@/lib/github/api";
 
 type Props = {
@@ -17,55 +17,77 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const currentPage = parseInt(page || "1", 10);
   const itemsPerPage = 10;
 
-  // 1. Try to fetch from Facet DB
-  const profile = await getProfileByUsername(username);
-
+  // Initialize data variables
   let collections: any[] = [];
   let repos: any[] = [];
   let totalReposCount = 0;
   let activeCollectionId = collectionId;
-  let isFacetUser = !!profile;
   let displayName = username;
   let avatarUrl = "";
   let bio = "";
+  let categorizedRepoNames: string[] = [];
+
+  // 1. Fetch GitHub User Data (Directly from GitHub API)
+  let gitHubUser: any = null;
+  try {
+    gitHubUser = await getGitHubUser(username);
+  } catch (e) {
+    return notFound();
+  }
+
+  displayName = gitHubUser.name || gitHubUser.login;
+  avatarUrl = gitHubUser.avatar_url;
+  bio = gitHubUser.bio || "";
+  totalReposCount = gitHubUser.public_repos;
+
+  // 2. Check if registered on Facet
+  const profile = await getProfileByUsername(username);
+  let isFacetUser = !!profile;
 
   if (isFacetUser && profile) {
-    // --- AUTHENTICATED FACET USER ---
-    displayName = profile.display_name || profile.github_username;
-    avatarUrl = profile.avatar_url || "";
-    bio = profile.bio || "";
+    const [userCollections, allCategorized] = await Promise.all([
+      getUserCollections(profile.id),
+      getAllUserRepoFullNames(profile.id)
+    ]);
     
-    // Fetch collections
-    collections = await getUserCollections(profile.id);
+    categorizedRepoNames = allCategorized;
+    displayName = profile.display_name || displayName;
+    avatarUrl = profile.avatar_url || avatarUrl;
+    bio = profile.bio || bio;
     
-    // Determine active collection
-    if (!activeCollectionId && collections.length > 0) {
-      activeCollectionId = collections[0].id;
-    }
+    // Combine virtual "Other" collection with DB collections
+    collections = [
+      { id: "all", title: "All Public Repos", count: Math.max(0, gitHubUser.public_repos - categorizedRepoNames.length) },
+      ...userCollections
+    ];
+  } else {
+    // Just the virtual "All" collection for non-Facet users
+    collections = [{ id: "all", title: "All Public Repos", count: gitHubUser.public_repos }];
+  }
 
-    if (activeCollectionId) {
-      const { data, count } = await getCollectionRepos(activeCollectionId, currentPage, itemsPerPage);
-      repos = data;
-      totalReposCount = count;
+  // 3. Determine active collection and fetch repos
+  if (!activeCollectionId) {
+    activeCollectionId = "all";
+  }
+
+  if (activeCollectionId === "all") {
+    if (isFacetUser) {
+        // Fetch more to ensure we have enough after filtering (up to 100 for a healthy mix)
+        const allGitHubRepos = await getGitHubUserRepos(username, 1, 100);
+        const filtered = allGitHubRepos.filter((r: any) => !categorizedRepoNames.includes(r.full_name));
+        totalReposCount = filtered.length;
+        
+        // Paginate local filtered array
+        const start = (currentPage - 1) * itemsPerPage;
+        repos = filtered.slice(start, start + itemsPerPage);
+    } else {
+        repos = await getGitHubUserRepos(username, currentPage, itemsPerPage);
+        totalReposCount = gitHubUser.public_repos;
     }
   } else {
-    // --- GITHUB FALLBACK USER ---
-    try {
-      const gitHubUser = await getGitHubUser(username);
-      displayName = gitHubUser.name || gitHubUser.login;
-      avatarUrl = gitHubUser.avatar_url;
-      bio = gitHubUser.bio;
-      totalReposCount = gitHubUser.public_repos;
-
-      // Create a "fake" default collection for the UI
-      collections = [{ id: "all", title: "All Public Repos", count: gitHubUser.public_repos }];
-      activeCollectionId = "all";
-
-      // Fetch public repos for the current page
-      repos = await getGitHubUserRepos(username, currentPage, itemsPerPage);
-    } catch (e) {
-      return notFound();
-    }
+    const { data, count } = await getCollectionRepos(activeCollectionId, currentPage, itemsPerPage);
+    repos = data;
+    totalReposCount = count;
   }
 
   return (
@@ -100,13 +122,20 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           <div className="space-y-6">
              {repos.length > 0 ? (
                 <>
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold">
-                      {collections.find(c => c.id === activeCollectionId)?.title || "Repositories"}
-                    </h2>
-                    <span className="text-sm text-muted-foreground">
-                      Page {currentPage} of {Math.ceil(totalReposCount / itemsPerPage) || 1}
-                    </span>
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-xl font-semibold">
+                        {collections.find(c => c.id === activeCollectionId)?.title || "Repositories"}
+                      </h2>
+                      <span className="text-sm text-muted-foreground">
+                        Page {currentPage} of {Math.ceil(totalReposCount / itemsPerPage) || 1}
+                      </span>
+                    </div>
+                    {collections.find(c => c.id === activeCollectionId)?.description && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {collections.find(c => c.id === activeCollectionId)?.description}
+                      </p>
+                    )}
                   </div>
 
                   <RepoList 
@@ -146,7 +175,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
                 </>
              ) : (
                 <div className="text-center py-20 text-muted-foreground">
-                    No repositories found in this collection.
+                    No repositories found.
                 </div>
              )}
           </div>

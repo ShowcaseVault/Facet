@@ -23,6 +23,7 @@ create table collection_repos (
   owner text not null,
   repo_name text not null,
   full_name text not null,
+  description text,
   note text,
   position integer default 0,
   created_at timestamp with time zone default now(),

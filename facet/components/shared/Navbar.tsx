@@ -64,11 +64,13 @@ export function Navbar() {
                </Link>
                <div className="flex items-center gap-2">
                  {user.user_metadata?.avatar_url && (
-                    <img 
-                      src={user.user_metadata.avatar_url} 
-                      alt="User" 
-                      className="h-8 w-8 rounded-full border border-border" 
-                    />
+                    <Link href={`/${user.user_metadata?.preferred_username || user.user_metadata?.user_name}`}>
+                        <img 
+                          src={user.user_metadata.avatar_url} 
+                          alt="User" 
+                          className="h-8 w-8 rounded-full border border-border transition-opacity hover:opacity-80 cursor-pointer" 
+                        />
+                    </Link>
                  )}
                </div>
                <Button onClick={handleLogout} variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
