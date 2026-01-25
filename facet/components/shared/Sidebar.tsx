@@ -61,12 +61,19 @@ function SortableCollectionItem({ collection, activeCollectionId, onSelect, mode
   };
 
   const content = (
-    <>
+    <div className="flex items-center gap-2 min-w-0 flex-1">
+      {mode === "edit" && (
+        <div className="text-muted-foreground/50 group-hover:text-muted-foreground transition-colors shrink-0">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/>
+          </svg>
+        </div>
+      )}
       <span className="truncate">{collection.title}</span>
       {collection.count !== undefined && (
-        <span className="ml-2 text-xs opacity-70">{collection.count}</span>
+        <span className="ml-auto text-xs opacity-70">{collection.count}</span>
       )}
-    </>
+    </div>
   );
 
   const classNameStr = cn(
