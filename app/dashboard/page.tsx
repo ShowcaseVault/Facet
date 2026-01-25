@@ -11,6 +11,7 @@ import { CreateCollectionModal } from "@/components/dashboard/CreateCollectionMo
 import { EditCollectionModal } from "@/components/dashboard/EditCollectionModal";
 import { AddRepoDialog } from "@/components/dashboard/AddRepoDialog";
 import { EditNoteDialog } from "@/components/dashboard/EditNoteDialog";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export default function DashboardPage() {
@@ -23,6 +24,13 @@ export default function DashboardPage() {
   const [editingCollection, setEditingCollection] = useState<any>(null);
   const [isAddRepoModalOpen, setIsAddRepoModalOpen] = useState(false);
   const [editingNoteRepo, setEditingNoteRepo] = useState<any>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant?: "default" | "destructive";
+  }>({ isOpen: false, title: "", message: "", onConfirm: () => {} });
 
   const supabase = createClient();
   const router = useRouter();
@@ -75,28 +83,51 @@ export default function DashboardPage() {
   };
 
   const handleDeleteCollection = async () => {
-    if (!activeCollectionId || !confirm("Are you sure you want to delete this collection?")) return;
-    try {
-      await deleteCollection(supabase, activeCollectionId);
-      const userCollections = await getUserCollections(supabase, user.id);
-      setCollections(userCollections || []);
-      if (activeCollectionId) {
+    if (!activeCollectionId) return;
+    setConfirmDialog({
+      isOpen: true,
+      title: "Delete Collection",
+      message: "Are you sure you want to delete this collection? This action cannot be undone.",
+      variant: "destructive",
+      onConfirm: async () => {
+        try {
+          await deleteCollection(supabase, activeCollectionId);
+          const userCollections = await getUserCollections(supabase, user.id);
+          setCollections(userCollections || []);
           router.push("/dashboard");
-      }
-    } catch (e) {
-      alert("Failed to delete collection");
-    }
+        } catch (e) {
+          setConfirmDialog({
+            isOpen: true,
+            title: "Error",
+            message: "Failed to delete collection. Please try again.",
+            onConfirm: () => {},
+          });
+        }
+      },
+    });
   };
 
   const handleRemoveRepo = async (repoId: string) => {
-      if (!confirm("Remove this repository from the collection?")) return;
-      try {
-          await removeRepoFromCollection(supabase, repoId.toString());
-          setRepos(repos.filter(r => r.id !== repoId));
-      } catch (e) {
-          console.error(e);
-          alert("Failed to remove repo");
-      }
+      setConfirmDialog({
+        isOpen: true,
+        title: "Remove Repository",
+        message: "Remove this repository from the collection?",
+        variant: "destructive",
+        onConfirm: async () => {
+          try {
+            await removeRepoFromCollection(supabase, repoId.toString());
+            setRepos(repos.filter(r => r.id !== repoId));
+          } catch (e) {
+            console.error(e);
+            setConfirmDialog({
+              isOpen: true,
+              title: "Error",
+              message: "Failed to remove repository. Please try again.",
+              onConfirm: () => {},
+            });
+          }
+        },
+      });
   };
 
   const handleReorderCollections = async (newOrder: any[]) => {
@@ -154,12 +185,25 @@ export default function DashboardPage() {
         onAddCollection={() => setIsCreateModalOpen(true)}
         onRenameCollection={(c) => setEditingCollection(c)}
         onDeleteCollection={(id) => {
-            if (confirm("Are you sure you want to delete this collection?")) {
+            setConfirmDialog({
+              isOpen: true,
+              title: "Delete Collection",
+              message: "Are you sure you want to delete this collection? This action cannot be undone.",
+              variant: "destructive",
+              onConfirm: () => {
                 deleteCollection(supabase, id).then(() => {
-                    getUserCollections(supabase, user.id).then(setCollections);
-                    if (activeCollectionId === id) router.push("/dashboard");
-                }).catch(e => alert("Failed to delete collection"));
-            }
+                  getUserCollections(supabase, user.id).then(setCollections);
+                  if (activeCollectionId === id) router.push("/dashboard");
+                }).catch(e => {
+                  setConfirmDialog({
+                    isOpen: true,
+                    title: "Error",
+                    message: "Failed to delete collection. Please try again.",
+                    onConfirm: () => {},
+                  });
+                });
+              },
+            });
         }}
         onReorderCollections={handleReorderCollections}
         className="w-64 flex-shrink-0"
@@ -263,6 +307,16 @@ export default function DashboardPage() {
             }}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        variant={confirmDialog.variant}
+        confirmText={confirmDialog.variant === "destructive" ? "Delete" : "Confirm"}
+      />
     </>
   );
 }

@@ -12,9 +12,10 @@ interface EditCollectionModalProps {
   collection: { id: string; title: string; description?: string };
   onClose: () => void;
   onSuccess: () => void;
+  onError?: (message: string) => void;
 }
 
-export function EditCollectionModal({ collection, onClose, onSuccess }: EditCollectionModalProps) {
+export function EditCollectionModal({ collection, onClose, onSuccess, onError }: EditCollectionModalProps) {
   const [title, setTitle] = useState(collection.title);
   const [description, setDescription] = useState(collection.description || "");
   const [loading, setLoading] = useState(false);
@@ -33,7 +34,7 @@ export function EditCollectionModal({ collection, onClose, onSuccess }: EditColl
       onClose();
     } catch (error) {
       console.error(error);
-      alert("Failed to update collection");
+      onError?.("Failed to update collection. Please try again.");
     } finally {
       setLoading(false);
     }

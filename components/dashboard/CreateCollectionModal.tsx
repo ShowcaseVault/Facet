@@ -12,9 +12,10 @@ import { createClient } from "@/lib/supabase/client";
 interface CreateCollectionModalProps {
   onClose: () => void;
   onSuccess: (newCollectionId: string) => void;
+  onError?: (message: string) => void;
 }
 
-export function CreateCollectionModal({ onClose, onSuccess }: CreateCollectionModalProps) {
+export function CreateCollectionModal({ onClose, onSuccess, onError }: CreateCollectionModalProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
@@ -33,7 +34,7 @@ export function CreateCollectionModal({ onClose, onSuccess }: CreateCollectionMo
       onClose();
     } catch (error) {
       console.error(error);
-      alert("Failed to create collection");
+      onError?.("Failed to create collection. Please try again.");
     } finally {
       setLoading(false);
     }

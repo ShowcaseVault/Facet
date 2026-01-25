@@ -15,9 +15,10 @@ interface AddRepoDialogProps {
   collectionId: string;
   onClose: () => void;
   onSuccess: () => void;
+  onError?: (message: string) => void;
 }
 
-export function AddRepoDialog({ collectionId, onClose, onSuccess }: AddRepoDialogProps) {
+export function AddRepoDialog({ collectionId, onClose, onSuccess, onError }: AddRepoDialogProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [results, setResults] = useState<any[]>([]);
@@ -99,8 +100,9 @@ export function AddRepoDialog({ collectionId, onClose, onSuccess }: AddRepoDialo
       router.refresh(); 
       onSuccess(); // Ensure parent knows something changed
     } catch (e: any) {
-        alert(e.message);
-    }
+        console.error(e);
+        onError?.(e.message || "Failed to add repository. Please try again.");
+    } finally { };
   };
 
   return (

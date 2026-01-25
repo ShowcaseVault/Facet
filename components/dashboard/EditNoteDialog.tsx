@@ -13,9 +13,10 @@ interface EditNoteDialogProps {
   initialNote: string;
   onClose: () => void;
   onSuccess: () => void;
+  onError?: (message: string) => void;
 }
 
-export function EditNoteDialog({ repoId, initialNote, onClose, onSuccess }: EditNoteDialogProps) {
+export function EditNoteDialog({ repoId, initialNote, onClose, onSuccess, onError }: EditNoteDialogProps) {
   const [note, setNote] = useState(initialNote);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -31,7 +32,7 @@ export function EditNoteDialog({ repoId, initialNote, onClose, onSuccess }: Edit
       onClose();
     } catch (error) {
       console.error(error);
-      alert("Failed to update note");
+      onError?.("Failed to update note. Please try again.");
     } finally {
       setLoading(false);
     }
