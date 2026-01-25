@@ -34,12 +34,6 @@ export function Sidebar({
         className
       )}
     >
-      <div className="flex h-14 items-center border-b px-4">
-        <Link href="/" className="flex items-center gap-2 font-semibold text-foreground">
-          <img src="/logo.png" alt="Facet Logo" className="h-8 w-8 object-contain" />
-          <span>Facet</span>
-        </Link>
-      </div>
 
       <div className="flex-1 overflow-y-auto p-4">
         <div className="mb-4 flex items-center justify-between">
@@ -94,17 +88,13 @@ export function Sidebar({
         )}
       </div>
 
-      <div className="border-t p-4">
-        {mode === "edit" ? (
-             <Button variant="ghost" className="w-full justify-start text-muted-foreground">
-                Settings
-             </Button>
-        ) : (
-            <div className="text-xs text-muted-foreground text-center">
-                Built with <Link href="/" className="underline text-primary">Facet</Link>
-            </div>
-        )}
-      </div>
+      {mode === "edit" && (
+        <div className="border-t p-4">
+          <Button variant="ghost" className="w-full justify-start text-muted-foreground">
+            Settings
+          </Button>
+        </div>
+      )}
     </aside>
   );
 }

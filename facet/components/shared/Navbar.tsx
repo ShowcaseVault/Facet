@@ -49,7 +49,7 @@ export function Navbar() {
       <div className="flex w-full h-14 items-center justify-between px-4 md:px-6">
         <div className="flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2 font-bold text-lg">
-             <img src="/logo.png" alt="Facet Logo" className="h-12 w-12 object-contain" />
+             <img src="/logo.png" alt="Facet Logo" className="h-8 w-8 object-contain" />
              <span className="hidden sm:inline-block">Facet</span>
           </Link>
         </div>
