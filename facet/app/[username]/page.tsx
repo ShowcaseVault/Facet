@@ -22,6 +22,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
 
   let collections: any[] = [];
   let repos: any[] = [];
+  let totalReposCount = 0;
   let activeCollectionId = collectionId;
   let isFacetUser = !!profile;
   let displayName = username;
@@ -37,13 +38,15 @@ export default async function ProfilePage({ params, searchParams }: Props) {
     // Fetch collections
     collections = await getUserCollections(profile.id);
     
-    // Determine active collection (default to first if none selected)
+    // Determine active collection
     if (!activeCollectionId && collections.length > 0) {
       activeCollectionId = collections[0].id;
     }
 
     if (activeCollectionId) {
-      repos = await getCollectionRepos(activeCollectionId);
+      const { data, count } = await getCollectionRepos(activeCollectionId, currentPage, itemsPerPage);
+      repos = data;
+      totalReposCount = count;
     }
   } else {
     // --- GITHUB FALLBACK USER ---
@@ -52,16 +55,15 @@ export default async function ProfilePage({ params, searchParams }: Props) {
       displayName = gitHubUser.name || gitHubUser.login;
       avatarUrl = gitHubUser.avatar_url;
       bio = gitHubUser.bio;
+      totalReposCount = gitHubUser.public_repos;
 
       // Create a "fake" default collection for the UI
       collections = [{ id: "all", title: "All Public Repos", count: gitHubUser.public_repos }];
       activeCollectionId = "all";
 
-      // Fetch all public repos
-      const gitHubRepos = await getGitHubUserRepos(username);
-      repos = gitHubRepos; // The structure matches closely enough for now, might need mapping
+      // Fetch public repos for the current page
+      repos = await getGitHubUserRepos(username, currentPage, itemsPerPage);
     } catch (e) {
-      // User not found on GitHub either
       return notFound();
     }
   }
@@ -103,21 +105,21 @@ export default async function ProfilePage({ params, searchParams }: Props) {
                       {collections.find(c => c.id === activeCollectionId)?.title || "Repositories"}
                     </h2>
                     <span className="text-sm text-muted-foreground">
-                      Page {currentPage} of {Math.ceil(repos.length / itemsPerPage) || 1}
+                      Page {currentPage} of {Math.ceil(totalReposCount / itemsPerPage) || 1}
                     </span>
                   </div>
 
                   <RepoList 
-                    repos={repos.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)} 
+                    repos={repos} 
                     mode="view" 
                   />
 
                   {/* Pagination Controls */}
-                  {repos.length > itemsPerPage && (
+                  {totalReposCount > itemsPerPage && (
                     <div className="flex items-center justify-center gap-4 py-8">
                        <Link 
                         href={`?${new URLSearchParams({ 
-                          ...(collectionId ? { collection: collectionId } : {}), 
+                          ...(activeCollectionId && isFacetUser ? { collection: activeCollectionId } : {}), 
                           page: (currentPage - 1).toString() 
                         })}`}
                         className={cn(
@@ -129,12 +131,12 @@ export default async function ProfilePage({ params, searchParams }: Props) {
                        </Link>
                        <Link 
                         href={`?${new URLSearchParams({ 
-                          ...(collectionId ? { collection: collectionId } : {}), 
+                          ...(activeCollectionId && isFacetUser ? { collection: activeCollectionId } : {}), 
                           page: (currentPage + 1).toString() 
                         })}`}
                         className={cn(
                           "px-4 py-2 text-sm font-medium rounded-md border",
-                          currentPage * itemsPerPage >= repos.length ? "pointer-events-none opacity-50" : "hover:bg-accent"
+                          currentPage * itemsPerPage >= totalReposCount ? "pointer-events-none opacity-50" : "hover:bg-accent"
                         )}
                        >
                          Next

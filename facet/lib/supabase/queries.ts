@@ -34,17 +34,21 @@ export async function getUserCollections(userId: string) {
   return data as Collection[];
 }
 
-export async function getCollectionRepos(collectionId: string) {
+export async function getCollectionRepos(collectionId: string, page = 1, perPage = 10) {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const from = (page - 1) * perPage;
+  const to = from + perPage - 1;
+
+  const { data, error, count } = await supabase
     .from("collection_repos")
-    .select("*")
+    .select("*", { count: "exact" })
     .eq("collection_id", collectionId)
     .order("position", { ascending: true })
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(from, to);
 
   if (error) throw error;
-  return data as CollectionRepo[];
+  return { data: data as CollectionRepo[], count: count || 0 };
 }
 
 export async function getProfileByUsername(username: string) {

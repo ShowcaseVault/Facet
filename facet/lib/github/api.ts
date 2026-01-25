@@ -10,10 +10,16 @@ export async function getGitHubUser(username: string) {
 }
 
 /**
- * Fetch GitHub user repositories
+ * Fetch GitHub user repositories with pagination
  */
-export async function getGitHubUserRepos(username: string) {
-  const res = await fetch(`${GITHUB_BASE_URL}/users/${username}/repos?sort=updated&per_page=100`);
+export async function getGitHubUserRepos(
+  username: string,
+  page = 1,
+  perPage = 10,
+) {
+  const res = await fetch(
+    `${GITHUB_BASE_URL}/users/${username}/repos?sort=updated&per_page=${perPage}&page=${page}`,
+  );
   if (!res.ok) throw new Error("Failed to fetch user repositories");
   return res.json();
 }
@@ -40,7 +46,9 @@ export async function getGitHubRepoReadme(owner: string, repo: string) {
  * Fetch languages used in a repository
  */
 export async function getGitHubRepoLanguages(owner: string, repo: string) {
-  const res = await fetch(`${GITHUB_BASE_URL}/repos/${owner}/${repo}/languages`);
+  const res = await fetch(
+    `${GITHUB_BASE_URL}/repos/${owner}/${repo}/languages`,
+  );
   if (!res.ok) throw new Error("Failed to fetch languages");
   return res.json();
 }
