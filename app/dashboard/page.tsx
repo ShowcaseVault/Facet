@@ -6,8 +6,9 @@ import { RepoList } from "@/components/shared/RepoList";
 import { Button } from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
 import { getUserCollections, getCollectionRepos } from "@/lib/supabase/queries";
-import { deleteCollection, removeRepoFromCollection, upsertProfile, reorderCollections, reorderRepos } from "@/lib/supabase/mutations";
+import { deleteCollection, removeRepoFromCollection, upsertProfile, reorderCollections, reorderRepos, updateCollection } from "@/lib/supabase/mutations";
 import { CreateCollectionModal } from "@/components/dashboard/CreateCollectionModal";
+import { EditCollectionModal } from "@/components/dashboard/EditCollectionModal";
 import { AddRepoDialog } from "@/components/dashboard/AddRepoDialog";
 import { EditNoteDialog } from "@/components/dashboard/EditNoteDialog";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -19,6 +20,7 @@ export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingCollection, setEditingCollection] = useState<any>(null);
   const [isAddRepoModalOpen, setIsAddRepoModalOpen] = useState(false);
   const [editingNoteRepo, setEditingNoteRepo] = useState<any>(null);
 
@@ -150,6 +152,15 @@ export default function DashboardPage() {
         activeCollectionId={activeCollectionId || undefined}
         onSelectCollection={handleSelectCollection}
         onAddCollection={() => setIsCreateModalOpen(true)}
+        onRenameCollection={(c) => setEditingCollection(c)}
+        onDeleteCollection={(id) => {
+            if (confirm("Are you sure you want to delete this collection?")) {
+                deleteCollection(supabase, id).then(() => {
+                    getUserCollections(supabase, user.id).then(setCollections);
+                    if (activeCollectionId === id) router.push("/dashboard");
+                }).catch(e => alert("Failed to delete collection"));
+            }
+        }}
         onReorderCollections={handleReorderCollections}
         className="w-64 flex-shrink-0"
       />
@@ -215,6 +226,17 @@ export default function DashboardPage() {
             onSuccess={(newId) => {
                 getUserCollections(supabase, user.id).then(setCollections);
                 router.push(`?collection=${newId}`);
+            }}
+        />
+      )}
+
+      {editingCollection && (
+        <EditCollectionModal
+            collection={editingCollection}
+            onClose={() => setEditingCollection(null)}
+            onSuccess={() => {
+                getUserCollections(supabase, user.id).then(setCollections);
+                router.refresh();
             }}
         />
       )}

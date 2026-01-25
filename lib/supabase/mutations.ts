@@ -57,6 +57,18 @@ export async function deleteCollection(supabase: SupabaseClient, collectionId: s
   if (error) throw error;
 }
 
+export async function updateCollection(supabase: SupabaseClient, collectionId: string, updates: { title?: string; description?: string }) {
+  const { data, error } = await supabase
+    .from("collections")
+    .update(updates)
+    .eq("id", collectionId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
 export async function removeRepoFromCollection(supabase: SupabaseClient, repoId: string) {
   const { error } = await supabase
     .from("collection_repos")
