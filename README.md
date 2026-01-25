@@ -104,5 +104,3 @@ This project is licensed under the **MIT License**.
 
 © 2026 [ShowcaseVault](https://github.com/ShowcaseVault).  
 Designed and developed by [Vishal Sigdel](https://github.com/Page-Vishal)[Page-Vishal].
-
-
