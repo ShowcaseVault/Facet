@@ -9,8 +9,28 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) {
+    const { data: { session }, error } = await supabase.auth.exchangeCodeForSession(code)
+    
+    if (!error && session?.user) {
+      // Sync Profile
+      const { user } = session;
+      const githubUsername = user.user_metadata?.preferred_username || user.user_metadata?.user_name;
+      
+      if (githubUsername) {
+         try {
+           const { upsertProfile } = await import('@/lib/supabase/mutations');
+           await upsertProfile(supabase, {
+             id: user.id,
+             github_username: githubUsername,
+             display_name: user.user_metadata?.full_name || githubUsername,
+             avatar_url: user.user_metadata?.avatar_url || "",
+             bio: user.user_metadata?.bio || ""
+           });
+         } catch (syncError) {
+           console.error("Profile sync failed in callback:", syncError);
+         }
+      }
+
       return NextResponse.redirect(`${origin}${next}`)
     }
   }
