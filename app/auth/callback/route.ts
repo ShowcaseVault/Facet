@@ -31,10 +31,12 @@ export async function GET(request: Request) {
          }
       }
 
-      return NextResponse.redirect(`${origin}${next}`)
+      const redirectTo = new URL(next, origin)
+      return NextResponse.redirect(redirectTo.toString())
     }
   }
 
   // return the user to an error page with instructions
-  return NextResponse.redirect(`${origin}/auth/auth-code-error`)
+  const errorUrl = new URL('/auth/auth-code-error', origin)
+  return NextResponse.redirect(errorUrl.toString())
 }

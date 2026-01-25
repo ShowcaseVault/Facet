@@ -37,8 +37,9 @@ Welcome to the Facet development guide! This document will help you set up your 
 
 4. **GitHub OAuth**
    - Create a GitHub OAuth App
-   - Set callback URL: `http://localhost:3000/auth/callback`
-   - Add credentials to Supabase Auth settings
+   - Set callback URL: `http://localhost:3000/auth/callback` for dev, and your Vercel URL for production.
+   - Add credentials to Supabase Auth settings.
+   - **Crucial**: In Supabase Dashboard (Auth → URL Configuration), update the **Site URL** to your Vercel URL and add it to **Redirect URLs**.
 
 5. **Start Development**
    ```bash
@@ -276,6 +277,7 @@ test("cn merges class names", () => {
    ```
 
 4. Create query functions:
+
    ```typescript
    export async function getTags(supabase: SupabaseClient) {
      const { data, error } = await supabase.from("tags").select("*");
