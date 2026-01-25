@@ -94,3 +94,21 @@ export async function upsertProfile(supabase: SupabaseClient, profileData: {
   if (error) throw error;
   return data;
 }
+
+export async function reorderCollections(supabase: SupabaseClient, updates: { id: string; position: number }[]) {
+  const { error } = await supabase
+    .from("collections")
+    .upsert(updates, { onConflict: 'id', ignoreDuplicates: false })
+    .select('id, position');
+
+  if (error) throw error;
+}
+
+export async function reorderRepos(supabase: SupabaseClient, updates: { id: string; position: number }[]) {
+  const { error } = await supabase
+    .from("collection_repos")
+    .upsert(updates, { onConflict: 'id', ignoreDuplicates: false })
+    .select('id, position');
+
+  if (error) throw error;
+}

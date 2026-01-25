@@ -57,8 +57,8 @@ export default async function ProfilePage({ params, searchParams }: Props) {
     
     // Combine virtual "Other" collection with DB collections
     collections = [
-      { id: "all", title: "All Public Repos", count: Math.max(0, gitHubUser.public_repos - categorizedRepoNames.length) },
-      ...userCollections
+      ...userCollections,
+      { id: "all", title: "All Public Repos", count: Math.max(0, gitHubUser.public_repos - categorizedRepoNames.length) }
     ];
   } else {
     // Just the virtual "All" collection for non-Facet users
@@ -66,6 +66,10 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   }
 
   // 3. Determine active collection and fetch repos
+  if (!activeCollectionId && collections.length > 0) {
+    activeCollectionId = collections[0].id;
+  }
+  
   if (!activeCollectionId) {
     activeCollectionId = "all";
   }

@@ -6,7 +6,7 @@ import { RepoList } from "@/components/shared/RepoList";
 import { Button } from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
 import { getUserCollections, getCollectionRepos } from "@/lib/supabase/queries";
-import { deleteCollection, removeRepoFromCollection, upsertProfile } from "@/lib/supabase/mutations";
+import { deleteCollection, removeRepoFromCollection, upsertProfile, reorderCollections, reorderRepos } from "@/lib/supabase/mutations";
 import { CreateCollectionModal } from "@/components/dashboard/CreateCollectionModal";
 import { AddRepoDialog } from "@/components/dashboard/AddRepoDialog";
 import { EditNoteDialog } from "@/components/dashboard/EditNoteDialog";
@@ -97,6 +97,49 @@ export default function DashboardPage() {
       }
   };
 
+  const handleReorderCollections = async (newOrder: any[]) => {
+    // Optimistic update
+    setCollections(newOrder);
+    
+    try {
+      // Must include required fields for upsert to work (Postgres needs valid INSERT payload)
+      const updates = newOrder.map((c, index) => ({
+        id: c.id,
+        user_id: c.user_id,
+        title: c.title,
+        description: c.description,
+        is_public: c.is_public,
+        position: index,
+        // created_at usually ignored or preserved on update
+      }));
+      await reorderCollections(supabase, updates);
+    } catch (e) {
+      console.error("Failed to reorder collections", e);
+    }
+  };
+
+  const handleReorderRepos = async (newOrder: any[]) => {
+    // Optimistic update
+    setRepos(newOrder);
+
+    try {
+      // Must include required fields for upsert to work
+      const updates = newOrder.map((r, index) => ({
+        id: r.id,
+        collection_id: r.collection_id,
+        owner: r.owner,
+        repo_name: r.repo_name,
+        full_name: r.full_name,
+        description: r.description,
+        note: r.note,
+        position: index,
+      }));
+      await reorderRepos(supabase, updates);
+    } catch (e) {
+      console.error("Failed to reorder repos", e);
+    }
+  };
+
   if (loading) return <div className="p-8">Loading dashboard...</div>;
 
   return (
@@ -107,6 +150,7 @@ export default function DashboardPage() {
         activeCollectionId={activeCollectionId || undefined}
         onSelectCollection={handleSelectCollection}
         onAddCollection={() => setIsCreateModalOpen(true)}
+        onReorderCollections={handleReorderCollections}
         className="w-64 flex-shrink-0"
       />
 
@@ -149,6 +193,7 @@ export default function DashboardPage() {
                         mode="pick" 
                         onRemove={(id) => handleRemoveRepo(id.toString())}
                         onNote={(repo) => setEditingNoteRepo(repo)}
+                        onReorder={handleReorderRepos}
                     />
                 ) : (
                     <div className="text-center py-20 text-muted-foreground">
