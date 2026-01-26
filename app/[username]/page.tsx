@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Sidebar } from "@/components/shared/Sidebar";
 import { RepoList } from "@/components/shared/RepoList";
 import { getProfileByUsername, getUserCollections, getCollectionRepos, getAllUserRepoFullNames } from "@/lib/supabase/server-queries";
-import { getGitHubUser, getGitHubUserRepos } from "@/lib/github/api";
+import { getGitHubUser, getGitHubUserRepos, getGitHubUserOrgs } from "@/lib/github/api";
 import type { Metadata } from "next";
 
 type Props = {
@@ -81,11 +81,15 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   let avatarUrl = "";
   let bio = "";
   let categorizedRepoNames: string[] = [];
+  let organizations: any[] = [];
 
   // 1. Fetch GitHub User Data (Directly from GitHub API)
   let gitHubUser: any = null;
   try {
-    gitHubUser = await getGitHubUser(username);
+    [gitHubUser, organizations] = await Promise.all([
+      getGitHubUser(username),
+      getGitHubUserOrgs(username)
+    ]);
   } catch (e) {
     return notFound();
   }
@@ -110,10 +114,17 @@ export default async function ProfilePage({ params, searchParams }: Props) {
     avatarUrl = profile.avatar_url || avatarUrl;
     bio = profile.bio || bio;
     
+    const personalCategorizedRepos = Array.from(new Set(
+      allCategorized.filter((fullName: string) => {
+        const owner = fullName.split('/')[0];
+        return owner.toLowerCase() === username.toLowerCase();
+      })
+    ));
+    
     // Combine virtual "Other" collection with DB collections
     collections = [
       ...userCollections,
-      { id: "all", title: "All Public Repos", count: Math.max(0, gitHubUser.public_repos - categorizedRepoNames.length) }
+      { id: "all", title: "All Public Repos", count: Math.max(0, gitHubUser.public_repos - personalCategorizedRepos.length) }
     ];
   } else {
     // Just the virtual "All" collection for non-Facet users
@@ -133,7 +144,12 @@ export default async function ProfilePage({ params, searchParams }: Props) {
     if (isFacetUser) {
         // Fetch more to ensure we have enough after filtering (up to 100 for a healthy mix)
         const allGitHubRepos = await getGitHubUserRepos(username, 1, 100);
-        const filtered = allGitHubRepos.filter((r: any) => !categorizedRepoNames.includes(r.full_name));
+        // Only filter out user's personal categorized repos, not org repos
+        const personalCategorizedRepos = categorizedRepoNames.filter((fullName: string) => {
+          const owner = fullName.split('/')[0];
+          return owner.toLowerCase() === username.toLowerCase();
+        });
+        const filtered = allGitHubRepos.filter((r: any) => !personalCategorizedRepos.includes(r.full_name));
         totalReposCount = filtered.length;
         
         // Paginate local filtered array
@@ -166,7 +182,32 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           <div className="mb-8 flex items-start gap-6">
              <img src={avatarUrl} alt={displayName} className="h-24 w-24 rounded-full border-4 border-muted" />
              <div>
-                <h1 className="text-3xl font-bold">{displayName}</h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-3xl font-bold">{displayName}</h1>
+                  {organizations.length > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      {organizations.map((org: any) => (
+                        <a
+                          key={org.id}
+                          href={`https://github.com/${org.login}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group relative"
+                          title={org.login}
+                        >
+                          <img
+                            src={org.avatar_url}
+                            alt={org.login}
+                            className="h-6 w-6 rounded-[4px] border border-muted transition-transform hover:scale-110 object-cover"
+                          />
+                          <span className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-foreground px-2 py-1 text-xs text-background opacity-0 transition-opacity group-hover:opacity-100">
+                            {org.login}
+                          </span>
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <p className="text-muted-foreground">@{username}</p>
                 {bio && <p className="mt-2 max-w-lg text-sm text-foreground/80">{bio}</p>}
                 

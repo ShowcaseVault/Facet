@@ -74,3 +74,14 @@ export async function getGitHubRepoLanguages(owner: string, repo: string) {
   if (!res.ok) throw new Error("Failed to fetch languages");
   return res.json();
 }
+
+/**
+ * Fetch GitHub user organizations
+ */
+export async function getGitHubUserOrgs(username: string) {
+  const res = await fetch(`${GITHUB_BASE_URL}/users/${username}/orgs`, {
+    next: { revalidate: 3600 },
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
