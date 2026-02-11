@@ -1,4 +1,4 @@
-# Facet
+# [Facet](https://facet-one.vercel.app)
 
 > **Curate your GitHub portfolio with style**
 
